@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sand Divination — Ironbreaker Foresees</title>
+
+<!--
+  IMPORTANT: after you host this file at your own address (Vercel, Netlify, your own domain, etc.),
+  replace the two placeholder lines below with the real addresses:
+  1) og:url   → the real link to this page
+  2) og:image → a 1200x630 cover image, hosted at your own address
+  No image? The WhatsApp/Instagram preview will just show title+description with no picture — fine, but a cover image gets far more clicks.
+-->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ironbreaker">
+<meta property="og:title" content="Sand Divination — Ironbreaker Foresees">
+<meta property="og:description" content="Scatter the body, send us what the sand reveals. Get your personal reading on love, career, and money.">
+<meta property="og:url" content="https://YOUR-ADDRESS.com/sand-divination">
+<meta property="og:image" content="https://YOUR-ADDRESS.com/sand-divination-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sand Divination — Ironbreaker Foresees">
+<meta name="twitter:description" content="Scatter the body, send us what the sand reveals.">
+<meta name="twitter:image" content="https://YOUR-ADDRESS.com/sand-divination-cover.png">
+<meta name="description" content="Scatter the body, send us what the sand reveals. Get your personal reading on love, career, and money.">
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Manrope:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#15110c;
+    --sand:#c9a468;
+    --sand-dim:#7a6440;
+    --ink:#f2e9d8;
+    --ink-dim:#a99b83;
+    --ember:#a8431f;
+    --ember-glow:#d9743f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:var(--bg);
+    font-family:'Manrope',sans-serif;
+    color:var(--ink);
+    touch-action:none;
+    -webkit-user-select:none; user-select:none;
+  }
+  #canvasWrap{position:fixed; inset:0;}
+  canvas{display:block; width:100%; height:100%; touch-action:none;}
+  #snapshotImg{
+    position:fixed; inset:0; width:100%; height:100%;
+    z-index:4; display:none;
+  }
+
+  .layer{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; align-items:center;
+    pointer-events:none;
+    z-index:5;
+  }
+  header{
+    margin-top: max(20px, env(safe-area-inset-top));
+    text-align:center;
+    padding:0 24px;
+  }
+  .eyebrow{
+    font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--ember-glow); font-weight:700; margin-bottom:6px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:500; font-style:italic;
+    font-size:clamp(22px,6vw,30px);
+    margin:0 0 6px 0; color:var(--ink);
+  }
+  .instruction{
+    font-size:13px; color:var(--ink-dim); line-height:1.5; max-width:290px;
+    margin:0 auto;
+    transition:opacity .5s ease;
+  }
+  .whisper{
+    font-size:13px; color:var(--ember-glow); line-height:1.5; max-width:400px;
+    margin:10px auto 0; font-weight:600;
+    opacity:0; transition:opacity 1.2s ease;
+  }
+  .whisper.show{opacity:1;}
+
+  #progressWrap{
+    position:fixed; left:0; right:0; top:0;
+    height:3px; background:rgba(255,255,255,.08);
+    z-index:6; overflow:hidden;
+  }
+  #progressBar{
+    height:100%; width:0%; background:var(--ember-glow);
+    transition:width .12s ease;
+  }
+  .progressLabel{
+    position:fixed; top:8px; right:14px;
+    font-size:10px; color:var(--ink-dim);
+    z-index:6; letter-spacing:.04em;
+  }
+
+  #result{
+    position:fixed; left:0; right:0; bottom:0;
+    padding: 24px 24px max(24px, env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center;
+    opacity:0; transform:translateY(24px);
+    transition:opacity .8s ease, transform .8s ease;
+    pointer-events:none;
+    background:linear-gradient(to top, rgba(21,17,12,.97) 45%, rgba(21,17,12,0));
+    z-index:6;
+  }
+  #result.show{opacity:1; transform:translateY(0); pointer-events:auto;}
+
+  .resultTitle{
+    font-family:'Fraunces',serif; font-weight:600; font-size:20px;
+    color:var(--ember-glow); margin-bottom:8px;
+  }
+  .resultText{
+    font-size:14px; line-height:1.55; color:var(--ink);
+    max-width:340px; margin-bottom:6px;
+  }
+  .resultHint{
+    font-size:12px; color:var(--ink-dim); margin-bottom:14px; min-height:16px;
+  }
+  .actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  button{
+    font-family:'Manrope',sans-serif; font-weight:700; font-size:13px;
+    letter-spacing:.03em;
+    padding:13px 22px; border-radius:2px; border:1px solid var(--sand-dim);
+    background:transparent; color:var(--ink);
+    cursor:pointer;
+  }
+  button.primary{background:var(--ember); border-color:var(--ember); color:#fff;}
+  button:active{opacity:.7;}
+
+  #introOverlay{
+    position:fixed; inset:0; z-index:8;
+    background:var(--bg);
+    display:flex; align-items:flex-start; justify-content:center;
+    padding: max(28px, env(safe-area-inset-top)) 24px 28px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    touch-action:auto;
+  }
+  .introCard{
+    width:100%; max-width:340px; text-align:center;
+  }
+  .introCard .eyebrow{margin-bottom:10px;}
+  .introCard h1{margin-bottom:18px;}
+  .questLabel{
+    font-size:12px; color:var(--ink-dim); text-align:left;
+    margin:16px 0 6px; letter-spacing:.02em;
+  }
+  .introCard input, .introCard textarea{
+    width:100%; background:transparent; border:1px solid var(--sand-dim);
+    border-radius:2px; color:var(--ink); font-family:'Manrope',sans-serif;
+    font-size:15px; padding:12px 14px; resize:none;
+    -webkit-user-select:text; user-select:text;
+    touch-action:auto;
+  }
+  .introCard input:focus, .introCard textarea:focus{
+    outline:none; border-color:var(--ember-glow);
+  }
+  .introCard textarea{height:56px;}
+  .introCard button.primary{width:100%; margin-top:22px; padding:14px;}
+
+  .categoryRow{display:flex; gap:8px; flex-wrap:wrap;}
+  .catBtn{
+    position:relative;
+    flex:1 1 auto; min-width:70px;
+    background:transparent; border:1px solid var(--sand-dim);
+    color:var(--ink-dim); font-family:'Manrope',sans-serif; font-size:13px;
+    font-weight:700; padding:10px 8px; border-radius:2px; cursor:pointer;
+  }
+  .catBtn.active{background:var(--ember); border-color:var(--ember); color:#fff;}
+  .catBtn .rankNum{
+    position:absolute; top:-9px; right:-9px;
+    width:20px; height:20px; border-radius:50%;
+    background:var(--ember-glow); color:#15110c;
+    font-size:12px; font-weight:700; line-height:20px;
+    display:none;
+  }
+  .catBtn.active .rankNum{display:block;}
+
+  .statusRow{display:flex; gap:8px; flex-wrap:wrap;}
+  .statusBtn{
+    flex:1 1 45%;
+    background:transparent; border:1px solid var(--sand-dim);
+    color:var(--ink-dim); font-family:'Manrope',sans-serif; font-size:12.5px;
+    font-weight:700; padding:10px 6px; border-radius:2px; cursor:pointer;
+  }
+  .statusBtn.active{background:var(--ember); border-color:var(--ember); color:#fff;}
+
+  .deliveryNote{
+    font-size:12px; color:var(--ink-dim); line-height:1.5;
+    border:1px solid var(--sand-dim); border-radius:2px;
+    padding:10px 12px; margin-top:20px; text-align:left;
+  }
+  .optionalTag{color:var(--ink-dim); font-weight:400;}
+</style>
+</head>
+<body>
+
+<div id="canvasWrap"><canvas id="c"></canvas></div>
+<img id="snapshotImg" alt="Sand divination result">
+<div id="progressWrap"><div id="progressBar"></div></div>
+<div class="progressLabel" id="progressLabel">0%</div>
+
+<div id="introOverlay">
+  <div class="introCard">
+    <div class="eyebrow">Ironbreaker Foresees — Sand Reading</div>
+    <h1>Before you begin</h1>
+
+    <p class="questLabel">Full name</p>
+    <input id="nameInput" type="text" placeholder="First and last name" maxlength="60" autocomplete="off">
+
+    <p class="questLabel">Date of birth</p>
+    <input id="birthInput" type="text" inputmode="numeric" placeholder="DD/MM/YYYY" maxlength="10" autocomplete="off">
+
+    <p class="questLabel">Occupation</p>
+    <input id="occupationInput" type="text" placeholder="What do you do?" maxlength="60" autocomplete="off">
+
+    <p class="questLabel">Relationship status</p>
+    <div class="statusRow" id="statusRow">
+      <button type="button" class="statusBtn" data-status="Single">Single</button>
+      <button type="button" class="statusBtn" data-status="In a relationship">In a relationship</button>
+      <button type="button" class="statusBtn" data-status="Married">Married</button>
+      <button type="button" class="statusBtn" data-status="It's complicated">It's complicated</button>
+    </div>
+
+    <p class="questLabel">Rank these from most to least important to you — tap in order. Tap again to undo.</p>
+    <div class="categoryRow" id="categoryRow">
+      <button type="button" class="catBtn" data-cat="Love">Love<span class="rankNum"></span></button>
+      <button type="button" class="catBtn" data-cat="Career">Career<span class="rankNum"></span></button>
+      <button type="button" class="catBtn" data-cat="Money">Money<span class="rankNum"></span></button>
+      <button type="button" class="catBtn" data-cat="Legacy">Legacy<span class="rankNum"></span></button>
+    </div>
+
+    <p class="questLabel">If you could have anything at all, what would you wish for?</p>
+    <textarea id="wishInput" placeholder="No limits — what would it be?" maxlength="180"></textarea>
+
+    <p class="questLabel">What's the biggest obstacle in your life right now?</p>
+    <textarea id="obstacleInput" placeholder="What stands in your way?" maxlength="180"></textarea>
+
+    <p class="questLabel">Are you at a crossroads right now? What are you torn between?</p>
+    <textarea id="crossroadsInput" placeholder="The choice you can't make yet…" maxlength="180"></textarea>
+
+    <p class="questLabel">Anything else you'd like us to know? <span class="optionalTag">(optional)</span></p>
+    <textarea id="extraInput" placeholder="Anything at all…" maxlength="200"></textarea>
+
+    <p class="questLabel">Email — if you'd like occasional messages from Ironbreaker <span class="optionalTag">(optional)</span></p>
+    <input id="emailInput" type="email" placeholder="you@example.com" maxlength="80" autocomplete="off">
+
+    <div class="deliveryNote">Your sand reading will be delivered via Etsy Messages.</div>
+
+    <button class="primary" id="beginBtn">Begin</button>
+  </div>
+</div>
+
+<div class="layer">
+  <header>
+    <div class="eyebrow">Ironbreaker Foresees — Body Divination</div>
+    <h1>Scatter the body</h1>
+    <p class="instruction" id="instruction">Touch every part of the sand body. Head, arms, torso, legs — don't miss a spot.</p>
+    <p class="whisper" id="whisperMsg">Almost there. What you do in these final seconds isn't random. The sand doesn't forget — where you touched, where you hesitated, where your hand drifted without thinking. Finish this ritual with intention. Let's see what the sand whispers back.</p>
+  </header>
+</div>
+
+<div id="result">
+  <div class="resultTitle">Scattered</div>
+  <div class="resultText">Save this image and send it to us in Etsy Messages — your personal reading on love, career, money, and legacy will arrive there.</div>
+  <div class="resultHint" id="shareStatus">If the button doesn't work: long-press the image and tap "Save".</div>
+  <div class="actions">
+    <button class="primary" id="shareBtn">Save / Send</button>
+    <button id="retryBtn">Mix again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const snapshotImg = document.getElementById('snapshotImg');
+  const progressBar = document.getElementById('progressBar');
+  const progressLabel = document.getElementById('progressLabel');
+  const instruction = document.getElementById('instruction');
+  const whisperMsg = document.getElementById('whisperMsg');
+  const resultEl = document.getElementById('result');
+  const shareStatus = document.getElementById('shareStatus');
+  const defaultHint = shareStatus.textContent;
+
+  let W,H,DPR;
+  let grains = [];
+  let maskData = null;
+  const SPACING = 6;
+  const TOUCH_THRESHOLD = 15;
+  const COMPLETE_AT = 0.98;
+  const MAX_DRIFT = 24;
+  let completed = false;
+  let started = false;
+  let userName = '';
+  let userBirth = '';
+  let userOccupation = '';
+  let userStatus = '';
+  let userWish = '';
+  let userObstacle = '';
+  let userCrossroads = '';
+  let userExtra = '';
+  let userEmail = '';
+  let ranking = [];   // ordered array of category names
+
+  const introOverlay = document.getElementById('introOverlay');
+
+  // birth date: digits only, slashes inserted automatically (DD/MM/YYYY)
+  const birthInput = document.getElementById('birthInput');
+  birthInput.addEventListener('input', ()=>{
+    const digits = birthInput.value.replace(/\D/g,'').slice(0,8);
+    let out = '';
+    for(let i=0;i<digits.length;i++){
+      if(i===2 || i===4) out += '/';
+      out += digits[i];
+    }
+    birthInput.value = out;
+  });
+
+  // relationship status: single select
+  const statusButtons = document.querySelectorAll('.statusBtn');
+  statusButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      statusButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      userStatus = btn.dataset.status;
+    });
+  });
+
+  // category ranking: tap in order → numbered; tap again → removed, later numbers shift down
+  const catButtons = document.querySelectorAll('.catBtn');
+  function refreshRankNums(){
+    catButtons.forEach(btn=>{
+      const idx = ranking.indexOf(btn.dataset.cat);
+      const numEl = btn.querySelector('.rankNum');
+      if(idx === -1){
+        btn.classList.remove('active');
+        numEl.textContent = '';
+      } else {
+        btn.classList.add('active');
+        numEl.textContent = (idx+1);
+      }
+    });
+  }
+  catButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const cat = btn.dataset.cat;
+      const idx = ranking.indexOf(cat);
+      if(idx === -1){
+        ranking.push(cat);
+      } else {
+        ranking.splice(idx, 1);   // undo — later picks renumber automatically
+      }
+      refreshRankNums();
+    });
+  });
+
+  document.getElementById('beginBtn').addEventListener('click', ()=>{
+    userName = document.getElementById('nameInput').value.trim();
+    userBirth = document.getElementById('birthInput').value.trim();
+    userOccupation = document.getElementById('occupationInput').value.trim();
+    userWish = document.getElementById('wishInput').value.trim();
+    userObstacle = document.getElementById('obstacleInput').value.trim();
+    userCrossroads = document.getElementById('crossroadsInput').value.trim();
+    userExtra = document.getElementById('extraInput').value.trim();
+    userEmail = document.getElementById('emailInput').value.trim();
+    started = true;
+    introOverlay.style.display = 'none';
+  });
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    W = Math.max(window.innerWidth, 1); H = Math.max(window.innerHeight, 1);
+    canvas.width = W*DPR; canvas.height = H*DPR;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    maskData = buildMask();
+    initGrains();
+  }
+
+  function taperedLimb(mctx, x1,y1,x2,y2, r1,r2, steps){
+    for(let i=0;i<=steps;i++){
+      const t = i/steps;
+      const x = x1+(x2-x1)*t;
+      const y = y1+(y2-y1)*t;
+      const r = r1+(r2-r1)*t;
+      mctx.beginPath();
+      mctx.arc(x,y,r,0,Math.PI*2);
+      mctx.fill();
+    }
+  }
+
+  function buildMask(){
+    const m = document.createElement('canvas');
+    m.width = W; m.height = H;
+    const mctx = m.getContext('2d');
+    mctx.fillStyle = '#fff';
+
+    const bh = H*0.54;
+    const bw = bh*0.44;
+    const cx = W/2;
+    const top = H*0.26;
+
+    const headRx = bh*0.044, headRy = bh*0.054;
+    const headCX = cx, headCY = top+headRy;
+    mctx.beginPath();
+    mctx.ellipse(headCX, headCY, headRx, headRy, 0, 0, Math.PI*2);
+    mctx.fill();
+
+    const neckTopY = headCY+headRy-2;
+    const shoulderY = neckTopY + bh*0.04;
+    taperedLimb(mctx, cx, neckTopY, cx, shoulderY, bw*0.038, bw*0.06, 6);
+
+    const waistY = shoulderY + bh*0.27;
+    const hipY = waistY + bh*0.09;
+    const shoulderHalfW = bw*0.255;
+    const waistHalfW = bw*0.115;
+    const hipHalfW = bw*0.155;
+
+    mctx.beginPath();
+    mctx.moveTo(cx-shoulderHalfW, shoulderY);
+    mctx.quadraticCurveTo(cx-waistHalfW*1.25, (shoulderY+waistY)/2, cx-waistHalfW, waistY);
+    mctx.quadraticCurveTo(cx-hipHalfW*1.08, (waistY+hipY)/2, cx-hipHalfW, hipY);
+    mctx.lineTo(cx+hipHalfW, hipY);
+    mctx.quadraticCurveTo(cx+hipHalfW*1.08, (waistY+hipY)/2, cx+waistHalfW, waistY);
+    mctx.quadraticCurveTo(cx+waistHalfW*1.25, (shoulderY+waistY)/2, cx+shoulderHalfW, shoulderY);
+    mctx.closePath();
+    mctx.fill();
+    mctx.beginPath(); mctx.arc(cx-shoulderHalfW, shoulderY, bw*0.032, 0, Math.PI*2); mctx.fill();
+    mctx.beginPath(); mctx.arc(cx+shoulderHalfW, shoulderY, bw*0.032, 0, Math.PI*2); mctx.fill();
+    mctx.beginPath(); mctx.arc(cx-hipHalfW, hipY, bw*0.026, 0, Math.PI*2); mctx.fill();
+    mctx.beginPath(); mctx.arc(cx+hipHalfW, hipY, bw*0.026, 0, Math.PI*2); mctx.fill();
+
+    const footY = top+bh;
+    const hipInnerL = cx-hipHalfW*0.4, hipInnerR = cx+hipHalfW*0.4;
+    const kneeY = hipY + (footY-hipY)*0.52;
+    taperedLimb(mctx, hipInnerL, hipY, cx-bw*0.135, kneeY, bw*0.068, bw*0.05, 14);
+    taperedLimb(mctx, cx-bw*0.135, kneeY, cx-bw*0.165, footY, bw*0.05, bw*0.034, 14);
+    taperedLimb(mctx, hipInnerR, hipY, cx+bw*0.135, kneeY, bw*0.068, bw*0.05, 14);
+    taperedLimb(mctx, cx+bw*0.135, kneeY, cx+bw*0.165, footY, bw*0.05, bw*0.034, 14);
+
+    const shoulderPtL = {x:cx-shoulderHalfW*1.06, y:shoulderY+bh*0.01};
+    const shoulderPtR = {x:cx+shoulderHalfW*1.06, y:shoulderY+bh*0.01};
+    const elbowY = shoulderY + bh*0.155;
+    const handY = shoulderY + bh*0.34;
+    const elbowL = {x:cx-bw*0.44, y:elbowY};
+    const elbowR = {x:cx+bw*0.44, y:elbowY};
+    const handL = {x:cx-bw*0.37, y:handY};
+    const handR = {x:cx+bw*0.37, y:handY};
+
+    taperedLimb(mctx, shoulderPtL.x, shoulderPtL.y, elbowL.x, elbowL.y, bw*0.055, bw*0.04, 12);
+    taperedLimb(mctx, elbowL.x, elbowL.y, handL.x, handL.y, bw*0.04, bw*0.028, 12);
+    taperedLimb(mctx, shoulderPtR.x, shoulderPtR.y, elbowR.x, elbowR.y, bw*0.055, bw*0.04, 12);
+    taperedLimb(mctx, elbowR.x, elbowR.y, handR.x, handR.y, bw*0.04, bw*0.028, 12);
+
+    return mctx.getImageData(0,0,W,H);
+  }
+
+  function isInside(x,y){
+    const xi = Math.floor(x), yi = Math.floor(y);
+    if(xi<0||yi<0||xi>=W||yi>=H) return false;
+    const idx = (yi*W+xi)*4;
+    return maskData.data[idx+3] > 10;
+  }
+
+  function initGrains(){
+    grains = [];
+    const cols = Math.ceil(W/SPACING);
+    const rows = Math.ceil(H/SPACING);
+    for(let i=0;i<cols;i++){
+      for(let j=0;j<rows;j++){
+        const bx = i*SPACING + (Math.random()-0.5)*SPACING*0.6;
+        const by = j*SPACING + (Math.random()-0.5)*SPACING*0.6;
+        if(!isInside(bx,by)) continue;
+        grains.push({
+          bx, by, x:bx, y:by, vx:0, vy:0,
+          r: 0.55 + Math.random()*0.75,
+          shade: Math.random(),
+          touched:false
+        });
+      }
+    }
+    completed = false;
+    snapshotImg.style.display = 'none';
+    canvas.style.display = 'block';
+    shareStatus.textContent = defaultHint;
+  }
+
+  function shadeColor(t){
+    const c1=[122,100,64], c2=[201,164,104];
+    const r=Math.round(c1[0]+(c2[0]-c1[0])*t);
+    const g=Math.round(c1[1]+(c2[1]-c1[1])*t);
+    const b=Math.round(c1[2]+(c2[2]-c1[2])*t);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  let pointer = {x:-999,y:-999,active:false};
+  const disturbRadius = 50;
+
+  function drawGrains(){
+    ctx.fillStyle = '#15110c';
+    ctx.fillRect(0,0,W,H);
+    for(const g of grains){
+      ctx.beginPath();
+      ctx.fillStyle = shadeColor(g.shade);
+      ctx.globalAlpha = 0.55 + g.shade*0.35;
+      ctx.arc(g.x, g.y, g.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function finish(){
+    if(completed) return;
+    completed = true;
+    resultEl.classList.add('show');
+    instruction.style.opacity = '0';
+    if(navigator.vibrate) navigator.vibrate(40);
+    try{
+      // build the full answer sheet to stamp onto the image
+      const lines = [];
+      const nameLine = [userName, userBirth].filter(Boolean).join(' · ');
+      if(nameLine) lines.push({t:nameLine, style:'title'});
+      if(userOccupation) lines.push({t:'Occupation: '+userOccupation, style:'body'});
+      if(userStatus) lines.push({t:'Status: '+userStatus, style:'body'});
+      if(ranking.length) lines.push({t:ranking.join(' › ').toUpperCase(), style:'accent'});
+      if(userWish) lines.push({t:'Wish: '+userWish, style:'body'});
+      if(userObstacle) lines.push({t:'Obstacle: '+userObstacle, style:'body'});
+      if(userCrossroads) lines.push({t:'Crossroads: '+userCrossroads, style:'body'});
+      if(userExtra) lines.push({t:'Note: '+userExtra, style:'body'});
+      if(userEmail) lines.push({t:'Email: '+userEmail, style:'body'});
+
+      if(lines.length){
+        // word-wrap long answers to the canvas width
+        const maxW = Math.min(W-48, 520);
+        const wrapped = [];
+        for(const ln of lines){
+          ctx.font = ln.style==='title' ? '600 15px sans-serif'
+                   : ln.style==='accent' ? '700 12px sans-serif'
+                   : '12.5px sans-serif';
+          const words = ln.t.split(' ');
+          let cur = '';
+          for(const w of words){
+            const test = cur ? cur+' '+w : w;
+            if(ctx.measureText(test).width > maxW && cur){
+              wrapped.push({t:cur, style:ln.style});
+              cur = w;
+            } else cur = test;
+          }
+          if(cur) wrapped.push({t:cur, style:ln.style});
+        }
+
+        const lineH = 19;
+        const pad = 16;
+        const blockH = wrapped.length*lineH + pad*2;
+        const startY = H - blockH;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(21,17,12,0.78)';
+        ctx.fillRect(0, startY, W, blockH);
+        let y = startY + pad + 13;
+        for(const ln of wrapped){
+          if(ln.style==='title'){
+            ctx.font = '600 15px sans-serif';
+            ctx.fillStyle = 'rgba(242,233,216,0.95)';
+          } else if(ln.style==='accent'){
+            ctx.font = '700 12px sans-serif';
+            ctx.fillStyle = 'rgba(217,116,63,0.95)';
+          } else {
+            ctx.font = '12.5px sans-serif';
+            ctx.fillStyle = 'rgba(200,188,166,0.92)';
+          }
+          ctx.fillText(ln.t, W/2, y);
+          y += lineH;
+        }
+        ctx.restore();
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      snapshotImg.src = dataUrl;
+      snapshotImg.style.display = 'block';
+    }catch(e){ /* canvas stays visible as the frozen result */ }
+  }
+
+  function frame(){
+    if(completed){
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    let touchedCount = 0;
+    for(const g of grains){
+      const dx = g.x-pointer.x, dy = g.y-pointer.y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      if(pointer.active && dist < disturbRadius){
+        const force = (1-dist/disturbRadius)*1.0;
+        const ang = Math.atan2(dy,dx) + (Math.random()-0.5)*0.7;
+        g.vx += Math.cos(ang)*force;
+        g.vy += Math.sin(ang)*force;
+      }
+
+      const distFromBase = Math.hypot(g.x-g.bx, g.y-g.by);
+      if(distFromBase > MAX_DRIFT){
+        const pull = (distFromBase-MAX_DRIFT)*0.035;
+        const angBack = Math.atan2(g.by-g.y, g.bx-g.x);
+        g.vx += Math.cos(angBack)*pull;
+        g.vy += Math.sin(angBack)*pull;
+      }
+      g.vx *= 0.90; g.vy *= 0.90;
+      g.x += g.vx; g.y += g.vy;
+
+      if(!g.touched && distFromBase > TOUCH_THRESHOLD) g.touched = true;
+      if(g.touched) touchedCount++;
+    }
+
+    drawGrains();
+
+    const coverage = grains.length ? touchedCount/grains.length : 0;
+    const pct = Math.min(coverage/COMPLETE_AT, 1);
+    if(progressBar) progressBar.style.width = (pct*100)+'%';
+    if(progressLabel) progressLabel.textContent = Math.round(pct*100)+'%';
+
+    if(pct >= 0.75){
+      if(whisperMsg) whisperMsg.classList.add('show');
+      if(instruction) instruction.style.opacity = '0';
+    }
+
+    if(coverage >= COMPLETE_AT){
+      finish();
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  function reset(){
+    resultEl.classList.remove('show');
+    instruction.style.opacity = '1';
+    whisperMsg.classList.remove('show');
+    initGrains();
+  }
+
+  function setPointer(x,y,active){
+    if(completed || !started) return;
+    pointer.x=x; pointer.y=y; pointer.active=active;
+  }
+  canvas.addEventListener('pointerdown', e=> setPointer(e.clientX,e.clientY,true));
+  canvas.addEventListener('pointermove', e=>{ if(pointer.active) setPointer(e.clientX,e.clientY,true); });
+  window.addEventListener('pointerup', ()=> setPointer(-999,-999,false));
+  window.addEventListener('pointercancel', ()=> setPointer(-999,-999,false));
+
+  document.getElementById('retryBtn').addEventListener('click', reset);
+
+  function dataUrlToBlob(dataUrl){
+    const [meta, b64] = dataUrl.split(',');
+    const mime = meta.match(/:(.*?);/)[1];
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], {type:mime});
+  }
+
+  document.getElementById('shareBtn').addEventListener('click', ()=>{
+    let dataUrl;
+    try{
+      dataUrl = (snapshotImg.src && snapshotImg.style.display!=='none')
+        ? snapshotImg.src
+        : canvas.toDataURL('image/png');
+    }catch(e){
+      shareStatus.textContent = 'Could not capture the image. Long-press it and save manually.';
+      return;
+    }
+
+    let file = null;
+    try{
+      const blob = dataUrlToBlob(dataUrl);
+      file = new File([blob], 'sand-divination.png', {type:'image/png'});
+    }catch(e){ /* fall through to download */ }
+
+    if(file && navigator.canShare && navigator.canShare({files:[file]})){
+      shareStatus.textContent = 'Opening share sheet…';
+      let shareText = 'Sand Reading — Ironbreaker Foresees';
+      if(userName) shareText += '\nName: ' + userName;
+      if(userBirth) shareText += '\nDOB: ' + userBirth;
+      if(userOccupation) shareText += '\nOccupation: ' + userOccupation;
+      if(userStatus) shareText += '\nStatus: ' + userStatus;
+      if(ranking.length) shareText += '\nPriorities: ' + ranking.join(' > ');
+      if(userWish) shareText += '\nWish: ' + userWish;
+      if(userObstacle) shareText += '\nObstacle: ' + userObstacle;
+      if(userCrossroads) shareText += '\nCrossroads: ' + userCrossroads;
+      if(userExtra) shareText += '\nNote: ' + userExtra;
+      if(userEmail) shareText += '\nEmail: ' + userEmail;
+      navigator.share({files:[file], text:shareText})
+        .then(()=>{ shareStatus.textContent = 'Sent.'; })
+        .catch(()=>{ fallbackDownload(dataUrl); });
+    } else {
+      fallbackDownload(dataUrl);
+    }
+  });
+
+  function fallbackDownload(dataUrl){
+    try{
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'sand-divination.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      shareStatus.textContent = 'Downloaded (if you can\'t find it: long-press the image and save).';
+    }catch(e){
+      try{
+        window.open(dataUrl, '_blank');
+        shareStatus.textContent = 'Opened in a new tab — long-press and save.';
+      }catch(e2){
+        shareStatus.textContent = 'Auto-save isn\'t supported in this browser. Long-press the image and save.';
+      }
+    }
+  }
+
+  window.addEventListener('resize', function(){ try{ resize(); }catch(e){} });
+  try{ resize(); frame(); }catch(e){ /* canvas init failed — form still works */ }
+})();
+</script>
+</body>
+</html>
